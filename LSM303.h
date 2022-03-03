@@ -7,13 +7,13 @@
 
 #ifndef L303D_LSM303D_H_
 #define L303D_LSM303D_H_
-//#define C_SIMULATION
+#define C_SIMULATION
 #ifndef C_SIMULATION
 #include "stm32h7xx_hal.h"
 #endif
 #include <stdlib.h>
-/* Register address map */
 
+/* Register address map */
 #define LSM303D_TEMP_OUT_L 	    ((uint8_t)(0x05))	/*OUTPUT*/
 #define LSM303D_TEMP_OUT_H 	    ((uint8_t)(0x06))	/*OUTPUT*/
 #define LSM303D_STATUS_M 	    ((uint8_t)(0x07))	/*OUTPUT*/
@@ -250,6 +250,88 @@ LSM303D_ErrorTypeDef LSM303D_ReadAcc(LSM303D *dev);
 LSM303D_ErrorTypeDef LSM303D_ReadMag(LSM303D *dev);
 
 int CalibrateAcc(LSM303D *dev);
-#endif
-#endif /* L303D_LSM303D_H_ */
 
+#else
+void StringToFloat(char str[], LSM303D *data)
+{
+    char *pt;
+    pt = strtok (str,",");
+    float x = atof(pt);
+    pt = strtok (NULL, ",");
+    data->acc[0] = x;
+    float y = atof(pt);
+    pt = strtok (NULL, ",");
+    data->acc[1] = y;
+    float z = atof(pt);
+    pt = strtok (NULL, ",");
+    data->acc[2] = z;
+
+}
+
+int GetAccData(LSM303D *dev)
+{
+      // file pointer will be used to open/read the file
+  FILE *file;
+
+  // used to store the filename and each line from the file
+  char filename[1024] = "../Sensor_Calibration/AccTest.txt";
+  char buffer[2048];
+
+  // stores the line number of the line the user wants to read from the file
+  static int read_line = 0;
+  read_line++;
+  // prompt the user for the line to read, store it into read_line
+
+
+  // open the the file in read mode
+  file = fopen(filename, "r");
+
+  // if the file failed to open, exit with an error message and status
+  if (file == NULL)
+  {
+    printf("Error opening file.\n");
+    return 1;
+  }
+
+  // we'll keep reading the file so long as keep_reading is true, and we'll 
+  // keep track of the current line of the file using current_line
+  bool keep_reading = true;
+  int current_line = 1;
+  do 
+  {
+    // read the next line from the file, store it into buffer
+    fgets(buffer, 2048, file);
+
+    // if we've reached the end of the file, we didn't find the line
+    if (feof(file))
+    {
+      // stop reading from the file, and tell the user the number of lines in 
+      // the file as well as the line number they were trying to read as the 
+      // file is not large enough
+      keep_reading = false;
+      printf("File %d lines.\n", current_line-1);
+      printf("Couldn't find line %d.\n", read_line);
+    }
+    // if we've found the line the user is looking for, print it out
+    else if (current_line == read_line)
+    {
+      keep_reading = false;
+      StringToFloat(buffer, dev);
+    }
+
+    // continue to keep track of the current line we are reading
+    current_line++;
+
+  } while (keep_reading);
+
+  // close our access to the file
+  fclose(file);
+
+  // notably at this point in the code, buffer will contain the line of the 
+  // file we were looking for if it was found successfully, so it could be 
+  // used for other purposes at this point as well...
+    return 0;
+}
+#endif
+
+#endif /* L303D_LSM303D_H_ */
