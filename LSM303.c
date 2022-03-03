@@ -90,9 +90,9 @@ LSM303D_ErrorTypeDef LSM303D_ReadAcc(LSM303D *dev)
 		tempData[1] = ((int16_t) inComeData[3]<<8 | inComeData[2]);
 		tempData[2] = ((int16_t) inComeData[5]<<8 | inComeData[4]);
 
-		dev->acc[0] = (float)tempData[0] * LSM303D_Mag_Sens * 9.8 / 1000;
-		dev->acc[1] = (float)tempData[1] * LSM303D_Mag_Sens * 9.8 / 1000;
-		dev->acc[2] = (float)tempData[2] * LSM303D_Mag_Sens * 9.8 / 1000;
+		dev->acc[0] = (float)tempData[0] * LSM303D_Acc_Sens * 9.8 / 1000;
+		dev->acc[1] = (float)tempData[1] * LSM303D_Acc_Sens * 9.8 / 1000;
+		dev->acc[2] = (float)tempData[2] * LSM303D_Acc_Sens * 9.8 / 1000;
 		return LSM303_REGISTER_WRITE_OK;
 	}
 	return LSM303_REGISTER_WRITE_ERROR;
