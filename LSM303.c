@@ -14,8 +14,11 @@ LSM303D_ErrorTypeDef LSM303D_CheckDevice(LSM303D *dev)
 		LSM303D_ReadRegister(dev, LSM303D_WHO_AM_I, &id);
 	return (id==LSM303D_Device_ID) ? (LSM303_SENSOR_CONNECTION_OK) : (LSM303_SENSOR_CONNECTION_ERROR);
 }
-
-LSM303D_ErrorTypeDef LSM303D_Init(LSM303D *dev, I2C_HandleTypeDef *i2cHandle)	//Add uint8_t* errHandling if DEBUG_EN
+#ifdef DEBUG_EN
+LSM303D_ErrorTypeDef LSM303D_Init(LSM303D *dev,  I2C_HandleTypeDef *i2cHandle, uint8_t* errHandling)
+#else
+LSM303D_ErrorTypeDef LSM303D_Init(LSM303D *dev, I2C_HandleTypeDef *i2cHandle)
+#endif
 {
 	dev->i2cHandle = i2cHandle;
 #ifdef DEBUG_EN
@@ -86,13 +89,13 @@ LSM303D_ErrorTypeDef LSM303D_ReadAcc(LSM303D *dev)
 	state |= LSM303D_ReadRegister(dev, LSM303D_OUT_Z_H_A, &inComeData[5]);
 	if (state==HAL_OK)
 	{
-		tempData[0] = ((int16_t) inComeData[1]<<8 | inComeData[0]);
-		tempData[1] = ((int16_t) inComeData[3]<<8 | inComeData[2]);
-		tempData[2] = ((int16_t) inComeData[5]<<8 | inComeData[4]);
+		tempData[0] = (int16_t) (inComeData[1]<<8 | inComeData[0]);
+		tempData[1] = (int16_t) (inComeData[3]<<8 | inComeData[2]);
+		tempData[2] = (int16_t) (inComeData[5]<<8 | inComeData[4]);
 
-		dev->acc[0] = (float)tempData[0] * LSM303D_Acc_Sens * 9.8 / 1000;
-		dev->acc[1] = (float)tempData[1] * LSM303D_Acc_Sens * 9.8 / 1000;
-		dev->acc[2] = (float)tempData[2] * LSM303D_Acc_Sens * 9.8 / 1000;
+		dev->acc[0] = (double)(tempData[0]) * LSM303D_Acc_Sens * GRAVITY / 1000;
+		dev->acc[1] = (double)(tempData[1]) * LSM303D_Acc_Sens * GRAVITY / 1000;
+		dev->acc[2] = (double)(tempData[2]) * LSM303D_Acc_Sens * GRAVITY / 1000;
 		return LSM303_REGISTER_WRITE_OK;
 	}
 	return LSM303_REGISTER_WRITE_ERROR;
@@ -110,9 +113,9 @@ LSM303D_ErrorTypeDef LSM303D_ReadMag(LSM303D *dev)
 	state |= LSM303D_ReadRegister(dev, LSM303D_OUT_Z_H_M, &inComeData[5]);
 	if (state==HAL_OK)
 	{
-		tempData[0] = ((int16_t) inComeData[1]<<8 | inComeData[0]);
-		tempData[1] = ((int16_t) inComeData[3]<<8 | inComeData[2]);
-		tempData[2] = ((int16_t) inComeData[5]<<8 | inComeData[4]);
+		tempData[0] = (int16_t) (inComeData[1]<<8 | inComeData[0]);
+		tempData[1] = (int16_t) (inComeData[3]<<8 | inComeData[2]);
+		tempData[2] = (int16_t) (inComeData[5]<<8 | inComeData[4]);
 
 		dev->mag[0] = (float)tempData[0] * LSM303D_Mag_Sens / 1000;
 		dev->mag[1] = (float)tempData[1] * LSM303D_Mag_Sens / 1000;
