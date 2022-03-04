@@ -7,10 +7,15 @@
 
 #ifndef L303D_LSM303D_H_
 #define L303D_LSM303D_H_
-#define C_SIMULATION
+#ifndef stdint
+#include <stdint.h>
+#endif
+//#define C_SIMULATION
 #ifndef C_SIMULATION
 #include "stm32h7xx_hal.h"
 #endif
+#define GRAVITY 9.80665F
+
 #include <stdlib.h>
 
 /* Register address map */
@@ -89,7 +94,7 @@ typedef struct {
 	I2C_HandleTypeDef *i2cHandle;
 	#endif
 	/* Acceleration data (X, Y, Z)*/
-	float acc[3];
+	double acc[3];
 	/* Magnetic data (X, Y, Z)*/
 	float mag[3];
 	/* Temperature data in deg */
@@ -239,17 +244,17 @@ float LSM303D_Mag_Sens;
 
 #ifndef C_SIMULATION
 LSM303D_ErrorTypeDef LSM303D_CheckDevice(LSM303D *dev);
-
-LSM303D_ErrorTypeDef LSM303D_Init(LSM303D *dev,  I2C_HandleTypeDef *i2cHandle); ////Add uint8_t* errHandling if DEBUG_EN
-
+#ifdef DEBUG_EN
+LSM303D_ErrorTypeDef LSM303D_Init(LSM303D *dev,  I2C_HandleTypeDef *i2cHandle, uint8_t* errHandling);
+#else
+LSM303D_ErrorTypeDef LSM303D_Init(LSM303D *dev,  I2C_HandleTypeDef *i2cHandle);
+#endif
 HAL_StatusTypeDef LSM303D_ReadRegister(LSM303D *dev, uint8_t reg, uint8_t *data);
 
 HAL_StatusTypeDef LSM303D_WriteRegister(LSM303D *dev, uint8_t reg, uint8_t *data);
 
 LSM303D_ErrorTypeDef LSM303D_ReadAcc(LSM303D *dev);
 LSM303D_ErrorTypeDef LSM303D_ReadMag(LSM303D *dev);
-
-int CalibrateAcc(LSM303D *dev);
 
 #endif
 
