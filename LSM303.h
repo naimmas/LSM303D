@@ -94,7 +94,8 @@ typedef struct {
 	I2C_HandleTypeDef *i2cHandle;
 	#endif
 	/* Acceleration data (X, Y, Z)*/
-	double acc[3];
+	float raw_acc[3];
+	float cal_acc[3];
 	/* Magnetic data (X, Y, Z)*/
 	float mag[3];
 	/* Temperature data in deg */
@@ -233,8 +234,8 @@ typedef enum CTRL7{
 #define LSM303D_MAG_12G_SENS 0.479F
 
 typedef enum {
-	LSM303_REGISTER_WRITE_ERROR=0x00,
-	LSM303_REGISTER_WRITE_OK=0x01,
+	LSM303_REGISTER_READ_ERROR=0x00,
+	LSM303_REGISTER_READ_OK=0x01,
 	LSM303_SENSOR_CONNECTION_ERROR=0x02,
 	LSM303_SENSOR_CONNECTION_OK=0x03
 } LSM303D_ErrorTypeDef;
@@ -255,6 +256,27 @@ HAL_StatusTypeDef LSM303D_WriteRegister(LSM303D *dev, uint8_t reg, uint8_t *data
 
 LSM303D_ErrorTypeDef LSM303D_ReadAcc(LSM303D *dev);
 LSM303D_ErrorTypeDef LSM303D_ReadMag(LSM303D *dev);
+
+/*********CALIBRATION************/
+//Determine max and min values manually//
+#define	AX_MAX	 09.44F	
+#define	AX_MIN	-09.61F	
+
+#define	AY_MAX	 09.81F	
+#define	AY_MIN	-10.03F	
+
+#define	AZ_MAX	 10.41F	
+#define	AZ_MIN	-09.27F	
+
+#define ACC_OFFSET_X ((AX_MAX + AX_MIN) / 2)
+#define ACC_OFFSET_Y ((AY_MAX + AY_MIN) / 2)
+#define ACC_OFFSET_Z ((AZ_MAX + AZ_MIN) / 2)
+
+#define ACC_SCALE_X (GRAVITY / (AX_MAX - ACC_OFFSET_X))
+#define ACC_SCALE_Y (GRAVITY / (AY_MAX - ACC_OFFSET_Y))
+#define ACC_SCALE_Z (GRAVITY / (AZ_MAX - ACC_OFFSET_Z))
+
+void ReadCalAcc(LSM303D *dev);
 
 #endif
 

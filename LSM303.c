@@ -93,14 +93,21 @@ LSM303D_ErrorTypeDef LSM303D_ReadAcc(LSM303D *dev)
 		tempData[1] = (int16_t) (inComeData[3]<<8 | inComeData[2]);
 		tempData[2] = (int16_t) (inComeData[5]<<8 | inComeData[4]);
 
-		dev->acc[0] = (double)(tempData[0]) * LSM303D_Acc_Sens * GRAVITY / 1000;
-		dev->acc[1] = (double)(tempData[1]) * LSM303D_Acc_Sens * GRAVITY / 1000;
-		dev->acc[2] = (double)(tempData[2]) * LSM303D_Acc_Sens * GRAVITY / 1000;
-		return LSM303_REGISTER_WRITE_OK;
+		dev->raw_acc[0] = (float)(tempData[0]) * LSM303D_Acc_Sens * GRAVITY / 1000;
+		dev->raw_acc[1] = (float)(tempData[1]) * LSM303D_Acc_Sens * GRAVITY / 1000;
+		dev->raw_acc[2] = (float)(tempData[2]) * LSM303D_Acc_Sens * GRAVITY / 1000;
+		return LSM303_REGISTER_READ_OK;
 	}
-	return LSM303_REGISTER_WRITE_ERROR;
+	return LSM303_REGISTER_READ_ERROR;
 }
 
+void ReadCalAcc(LSM303D* dev)
+{
+	LSM303D_ReadAcc(dev);
+	dev->cal_acc[0] = (dev->raw_acc[0] - ACC_OFFSET_X) * ACC_SCALE_X;
+	dev->cal_acc[1] = (dev->raw_acc[1] - ACC_OFFSET_Y) * ACC_SCALE_Y;
+	dev->cal_acc[2] = (dev->raw_acc[2] - ACC_OFFSET_Z) * ACC_SCALE_Z;
+}
 LSM303D_ErrorTypeDef LSM303D_ReadMag(LSM303D *dev)
 {
 	uint8_t inComeData[6]; HAL_StatusTypeDef state; int16_t tempData[3];
@@ -121,9 +128,9 @@ LSM303D_ErrorTypeDef LSM303D_ReadMag(LSM303D *dev)
 		dev->mag[1] = (float)tempData[1] * LSM303D_Mag_Sens / 1000;
 		dev->mag[2] = (float)tempData[2] * LSM303D_Mag_Sens / 1000;
 
-		return LSM303_REGISTER_WRITE_OK;
+		return LSM303_REGISTER_READ_OK;
 	}
-	return LSM303_REGISTER_WRITE_ERROR;
+	return LSM303_REGISTER_READ_ERROR;
 }
 
 HAL_StatusTypeDef LSM303D_ReadRegister(LSM303D *dev, uint8_t reg, uint8_t *data) {
@@ -136,4 +143,3 @@ HAL_StatusTypeDef LSM303D_WriteRegister(LSM303D *dev, uint8_t reg, uint8_t *data
 	return HAL_I2C_Mem_Write(dev->i2cHandle, LSM303D_SA0H_W, reg,
 			I2C_MEMADD_SIZE_8BIT, data, 1, HAL_MAX_DELAY);
 }
-
