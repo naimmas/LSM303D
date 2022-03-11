@@ -13,6 +13,8 @@
 //#define C_SIMULATION
 #ifndef C_SIMULATION
 #include "stm32h7xx_hal.h"
+#include "stm32h743xx.h"
+#include "arm_math.h"
 #endif
 #define GRAVITY 9.80665F
 
@@ -95,9 +97,8 @@ typedef struct {
 	#endif
 	/* Acceleration data (X, Y, Z)*/
 	float raw_acc[3];
-	float cal_acc[3];
 	/* Magnetic data (X, Y, Z)*/
-	float mag[3];
+	float raw_mag[3];
 	/* Temperature data in deg */
 	int16_t temp_C;
 	#ifdef DEBUG_EN
@@ -258,26 +259,45 @@ LSM303D_ErrorTypeDef LSM303D_ReadAcc(LSM303D *dev);
 LSM303D_ErrorTypeDef LSM303D_ReadMag(LSM303D *dev);
 
 /*********CALIBRATION************/
-//Determine max and min values manually//
-#define	AX_MAX	 09.44F	
-#define	AX_MIN	-09.61F	
+/*Structure to handle calibrated sensor values and calibration coefficient*/
+#define BIAS_ROW	3
+#define BIAS_COL	1
+#define OFFSET_ROW	3
+#define OFFSET_COL	3
 
-#define	AY_MAX	 09.81F	
-#define	AY_MIN	-10.03F	
+const static float MagBias[BIAS_ROW][BIAS_COL] =
+					{ 0 };
+const static float MagOffset[OFFSET_ROW][OFFSET_COL] =
+					{ 0 };
+const static float AccOffset[OFFSET_ROW][OFFSET_COL] =
+					{	{1.028952 ,-0.001601 ,0.001006	},
+						{-0.001601 , 0.986407 , 0.000016},
+						{0.001006, 0.000016 , 0.995411	}};
+const static float AccBias[BIAS_ROW][BIAS_COL] =
+					{	{-0.007601}, {-0.006302}, {0.062237}};
 
-#define	AZ_MAX	 10.41F	
-#define	AZ_MIN	-09.27F	
+typedef enum{
+	CAL_SUCCESS 	= 0,
+	CAL_PARAMS_ERR 	= 1,
+	CAL_MATH_ERR 	= 2,
+	CAL_FAILED 		= 3
+}LSM303D_CalStateTypedef;
 
-#define ACC_OFFSET_X ((AX_MAX + AX_MIN) / 2)
-#define ACC_OFFSET_Y ((AY_MAX + AY_MIN) / 2)
-#define ACC_OFFSET_Z ((AZ_MAX + AZ_MIN) / 2)
+typedef struct{
+	float SensorRead[3][1];
+	arm_matrix_instance_f32 BM;	//Bias
+	arm_matrix_instance_f32 OM;	//Offset
+	arm_matrix_instance_f32 RM;	//Raw
+	arm_matrix_instance_f32 CM;	//Output
+}LSM303D_Calibrated;
 
-#define ACC_SCALE_X (GRAVITY / (AX_MAX - ACC_OFFSET_X))
-#define ACC_SCALE_Y (GRAVITY / (AY_MAX - ACC_OFFSET_Y))
-#define ACC_SCALE_Z (GRAVITY / (AZ_MAX - ACC_OFFSET_Z))
-
-void ReadCalAcc(LSM303D *dev);
+/*Simple algorithm to calibrate accelerometer and magnetometer*/
+/*For expert calibration use Matlab or Python code*/
+LSM303D_CalStateTypedef LSM303D_SimpleCalibrateAcc(LSM303D* dev, LSM303D_Calibrated* cal);
+LSM303D_CalStateTypedef LSM303D_SimpleCalibrateMag(LSM303D* dev, LSM303D_Calibrated* cal);
+/*Read accelerometer and magnetometer then apply calibration*/
+LSM303D_CalStateTypedef LSM303D_GetCalibratedAcc(LSM303D* dev, LSM303D_Calibrated* cal);
+LSM303D_CalStateTypedef LSM303D_GetCalibratedMag(LSM303D* dev, LSM303D_Calibrated* cal);
 
 #endif
-
 #endif /* L303D_LSM303D_H_ */

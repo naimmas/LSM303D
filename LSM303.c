@@ -5,7 +5,7 @@
  *      Author: ajanx
  */
 #include "LSM303.h"
-#include "stm32h743xx.h"
+
 
 LSM303D_ErrorTypeDef LSM303D_CheckDevice(LSM303D *dev)
 {
@@ -101,13 +101,6 @@ LSM303D_ErrorTypeDef LSM303D_ReadAcc(LSM303D *dev)
 	return LSM303_REGISTER_READ_ERROR;
 }
 
-void ReadCalAcc(LSM303D* dev)
-{
-	LSM303D_ReadAcc(dev);
-	dev->cal_acc[0] = (dev->raw_acc[0] - ACC_OFFSET_X) * ACC_SCALE_X;
-	dev->cal_acc[1] = (dev->raw_acc[1] - ACC_OFFSET_Y) * ACC_SCALE_Y;
-	dev->cal_acc[2] = (dev->raw_acc[2] - ACC_OFFSET_Z) * ACC_SCALE_Z;
-}
 LSM303D_ErrorTypeDef LSM303D_ReadMag(LSM303D *dev)
 {
 	uint8_t inComeData[6]; HAL_StatusTypeDef state; int16_t tempData[3];
@@ -124,15 +117,59 @@ LSM303D_ErrorTypeDef LSM303D_ReadMag(LSM303D *dev)
 		tempData[1] = (int16_t) (inComeData[3]<<8 | inComeData[2]);
 		tempData[2] = (int16_t) (inComeData[5]<<8 | inComeData[4]);
 
-		dev->mag[0] = (float)tempData[0] * LSM303D_Mag_Sens / 1000;
-		dev->mag[1] = (float)tempData[1] * LSM303D_Mag_Sens / 1000;
-		dev->mag[2] = (float)tempData[2] * LSM303D_Mag_Sens / 1000;
+		dev->raw_mag[0] = (float)tempData[0] * LSM303D_Mag_Sens / 1000;
+		dev->raw_mag[1] = (float)tempData[1] * LSM303D_Mag_Sens / 1000;
+		dev->raw_mag[2] = (float)tempData[2] * LSM303D_Mag_Sens / 1000;
 
 		return LSM303_REGISTER_READ_OK;
 	}
 	return LSM303_REGISTER_READ_ERROR;
 }
 
+LSM303D_CalStateTypedef LSM303D_GetCalibratedAcc(LSM303D* dev, LSM303D_Calibrated* cal)
+{
+	LSM303D_ReadAcc(dev);
+	if(AccBias[0][0] == 0 || AccOffset[0][0] == 0)
+		return CAL_PARAMS_ERR;
+
+	  arm_matrix_instance_f32 temp1M;
+	  float32_t temp1[3][1];
+
+	  arm_status status;
+
+	  arm_mat_init_f32(&cal->BM, BIAS_ROW, BIAS_COL, (float32_t *)AccBias);
+	  arm_mat_init_f32(&cal->OM, OFFSET_ROW, OFFSET_COL, (float32_t *)AccOffset);
+	  arm_mat_init_f32(&cal->RM, 3, 1, (float32_t *)dev->raw_acc);
+	  arm_mat_init_f32(&cal->CM, 3, 1, (float32_t *)cal->SensorRead);
+	  arm_mat_init_f32(&temp1M, 3, 1, (float32_t *)temp1);
+
+	  status  = arm_mat_sub_f32(&cal->RM, &cal->BM, &temp1M);
+	  status |= arm_mat_mult_f32(&cal->OM, &temp1M, &cal->CM);
+
+	  return ((status==ARM_MATH_SUCCESS)? CAL_SUCCESS : CAL_MATH_ERR);
+}
+LSM303D_CalStateTypedef LSM303D_GetCalibratedMag(LSM303D* dev, LSM303D_Calibrated* cal)
+{
+	LSM303D_ReadMag(dev);
+		if(MagBias[0][0] == 0 || MagOffset[0][0] == 0)
+			return CAL_PARAMS_ERR;
+
+		  arm_matrix_instance_f32 temp1M;
+		  float32_t temp1[3][1];
+
+		  arm_status status;
+
+		  arm_mat_init_f32(&cal->BM, BIAS_ROW, BIAS_COL, (float32_t *)MagBias);
+		  arm_mat_init_f32(&cal->OM, OFFSET_ROW, OFFSET_COL, (float32_t *)MagOffset);
+		  arm_mat_init_f32(&cal->RM, 3, 1, (float32_t *)dev->raw_acc);
+		  arm_mat_init_f32(&cal->CM, 3, 1, (float32_t *)cal->SensorRead);
+		  arm_mat_init_f32(&temp1M, 3, 1, (float32_t *)temp1);
+
+		  status  = arm_mat_sub_f32(&cal->RM, &cal->BM, &temp1M);
+		  status |= arm_mat_mult_f32(&cal->OM, &temp1M, &cal->CM);
+
+		  return ((status==ARM_MATH_SUCCESS)? CAL_SUCCESS : CAL_MATH_ERR);
+}
 HAL_StatusTypeDef LSM303D_ReadRegister(LSM303D *dev, uint8_t reg, uint8_t *data) {
 	return HAL_I2C_Mem_Read(dev->i2cHandle, LSM303D_SA0H_R, reg, 1, data,
 			I2C_MEMADD_SIZE_8BIT, HAL_MAX_DELAY);
